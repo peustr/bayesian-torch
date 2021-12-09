@@ -47,10 +47,10 @@ class Linear(nn.Module):
             self.bias = d2.sample()
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        d1 = Normal(self.weight_means, self.weight_stds)
+        d1 = Normal(self.weight_means, F.softplus(self.weight_stds))
         self.weight = d1.rsample()
         if self.bias is not None:
-            d2 = Normal(self.bias_means, self.bias_stds)
+            d2 = Normal(self.bias_means, F.softplus(self.bias_stds))
             self.bias = d2.rsample()
         return F.linear(input, self.weight, self.bias)
 
