@@ -202,4 +202,4 @@ class Conv2d(_ConvNd):
                 w = self.bias_distribution.mu
             self.log_prior = None
             self.log_posterior = None
-        return self._conv_forward(x, w, w)
+        return self._conv_forward(x, w, b)
