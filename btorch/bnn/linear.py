@@ -1,9 +1,8 @@
-import math
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions.normal import Normal
+
+from btorch.bnn.distributions import ParametricGaussian, ParametricGaussianMixture
 
 
 class Linear(nn.Module):
@@ -14,45 +13,53 @@ class Linear(nn.Module):
     weight: torch.Tensor
 
     def __init__(self, in_features: int, out_features: int, bias: bool = True,
-                 device=None, dtype=None) -> None:
+                 device=None, dtype=None, prior_pi=0.5) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
-        super(Linear, self).__init__()
+        super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight_means = nn.Parameter(torch.empty((out_features, in_features), **factory_kwargs))
-        self.weight_stds = nn.Parameter(torch.empty((out_features, in_features), **factory_kwargs))
+        self.weight_distribution = ParametricGaussian((out_features, in_features), **factory_kwargs)
+        self.weight_prior = ParametricGaussianMixture(
+            ParametricGaussian((out_features, in_features), **factory_kwargs),
+            ParametricGaussian((out_features, in_features), **factory_kwargs),
+            pi=prior_pi
+        )
+        self.weight = self.weight_distribution.sample()
         if bias:
-            self.bias_means = nn.Parameter(torch.empty(out_features, **factory_kwargs))
-            self.bias_stds = nn.Parameter(torch.empty(out_features, **factory_kwargs))
+            self.bias_distribution = ParametricGaussian(out_features, **factory_kwargs)
+            self.bias_prior = ParametricGaussianMixture(
+                ParametricGaussian(out_features, **factory_kwargs),
+                ParametricGaussian(out_features, **factory_kwargs),
+                pi=prior_pi
+            )
+            self.bias = self.bias_distribution.sample()
         else:
-            self.register_parameter('bias_means', None)
-            self.register_parameter('bias_stds', None)
             self.register_parameter('bias', None)
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        # Setting a=sqrt(5) in kaiming_uniform is the same as initializing with
-        # uniform(-1/sqrt(in_features), 1/sqrt(in_features)). For details, see
-        # https://github.com/pytorch/pytorch/issues/57109
-        nn.init.kaiming_uniform_(self.weight_means, a=math.sqrt(5))
-        nn.init.uniform_(self.weight_stds, 0., math.sqrt(5))
-        d1 = Normal(self.weight_means, self.weight_stds)
-        self.weight = d1.sample()
-        if (self.bias_means is not None) and (self.bias_stds is not None):
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight_means)
-            bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
-            nn.init.uniform_(self.bias_means, -bound, bound)
-            nn.init.uniform_(self.bias_stds, 0., bound)
-            d2 = Normal(self.bias_means, self.bias_stds)
-            self.bias = d2.sample()
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        d1 = Normal(self.weight_means, self.weight_stds.exp())
-        self.weight = d1.rsample()
+        self.weight = self.weight_distribution.sample()
         if self.bias is not None:
-            d2 = Normal(self.bias_means, self.bias_stds.exp())
-            self.bias = d2.rsample()
-        return F.linear(input, self.weight, self.bias)
+            self.bias = self.bias_distribution.sample()
+        self.log_prior = None
+        self.log_posterior = None
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.training:
+            self.weight = self.weight_distribution.sample()
+            self.log_prior = self.weight_prior.log_prob(self.weight)
+            self.log_posterior = self.weight_distribution.log_prob(self.weight)
+            if self.bias is not None:
+                self.bias = self.bias_distribution.sample()
+                self.log_prior += self.bias_prior.log_prob(self.bias)
+                self.log_posterior += self.bias_distribution.log_prob(self.bias)
+        else:
+            self.weight = self.weight_distribution.mu
+            if self.bias is not None:
+                self.bias = self.bias_distribution.mu
+            self.log_prior = None
+            self.log_posterior = None
+        return F.linear(x, self.weight, self.bias)
 
     def extra_repr(self) -> str:
         return 'in_features={}, out_features={}, bias={}'.format(
