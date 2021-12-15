@@ -8,8 +8,8 @@ class ParametricGaussian(nn.Module):
     def __init__(self, shape, device=None, dtype=None):
         super().__init__()
         factory_kwargs = {'device': device, 'dtype': dtype}
-        self.mu = nn.Parameter(torch.empty(shape, **factory_kwargs).uniform_(-0.2, 0.2))
-        self.rho = nn.Parameter(torch.empty(shape, **factory_kwargs).uniform_(-4., -1.))
+        self.mu = nn.Parameter(torch.randn(shape, **factory_kwargs))
+        self.rho = nn.Parameter(torch.randn(shape, **factory_kwargs))
 
     @property
     def sigma(self):
@@ -40,4 +40,5 @@ class ParametricGaussianMixture(nn.Module):
         return (
             self.pi * self.gaussian_1.log_prob(w, False).exp()
             + (1 - self.pi) * self.gaussian_2.log_prob(w, False).exp()
+            + 1e-6
         ).log().sum()
