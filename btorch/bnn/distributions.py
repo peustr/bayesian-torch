@@ -18,12 +18,15 @@ class ParametricGaussian(nn.Module):
     def sample(self):
         return self.mu + self.sigma * torch.randn_like(self.mu)
 
-    def log_prob(self, w):
-        return (
+    def log_prob(self, w, reduction=True):
+        log_probs = (
             - math.log(math.sqrt(2 * math.pi))
             - self.sigma.log()
             - ((w - self.mu).square()) / (2 * self.sigma.square())
-        ).sum()
+        )
+        if reduction:
+            return log_probs.sum()
+        return log_probs
 
 
 class ParametricGaussianMixture(nn.Module):
@@ -35,6 +38,6 @@ class ParametricGaussianMixture(nn.Module):
 
     def log_prob(self, w):
         return (
-            self.pi * self.gaussian_1.log_prob(w).exp()
-            + (1 - self.pi) * self.gaussian_2.log_prob(w).exp()
+            self.pi * self.gaussian_1.log_prob(w, False).exp()
+            + (1 - self.pi) * self.gaussian_2.log_prob(w, False).exp()
         ).log().sum()
