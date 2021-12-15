@@ -121,6 +121,7 @@ class _ConvNd(nn.Module):
                 ParametricGaussian(out_channels, **factory_kwargs),
                 pi=prior_pi
             )
+            self.bias = self.bias_distribution.sample()
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
