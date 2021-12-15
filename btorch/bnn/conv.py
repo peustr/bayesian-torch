@@ -30,8 +30,10 @@ class _ConvNd(nn.Module):
     output_padding: Tuple[int, ...]
     groups: int
     padding_mode: str
-    weight: torch.Tensor
-    bias: Optional[torch.Tensor]
+    weight_distribution: nn.Module
+    weight_prior: nn.Module
+    bias_distribution: Optional[nn.Module]
+    bias_prior: Optional[nn.Module]
 
     def __init__(self,
                  in_channels: int,
@@ -103,7 +105,6 @@ class _ConvNd(nn.Module):
                 ParametricGaussian((in_channels, out_channels // groups, *kernel_size), **factory_kwargs),
                 pi=prior_pi
             )
-            self.weight = self.weight_distribution.sample()
         else:
             self.weight_distribution = ParametricGaussian(
                 (out_channels, in_channels // groups, *kernel_size), **factory_kwargs
@@ -113,7 +114,6 @@ class _ConvNd(nn.Module):
                 ParametricGaussian((out_channels, in_channels // groups, *kernel_size), **factory_kwargs),
                 pi=prior_pi
             )
-            self.weight = self.weight_distribution.sample()
         if bias:
             self.bias_distribution = ParametricGaussian(out_channels, **factory_kwargs)
             self.bias_prior = ParametricGaussianMixture(
@@ -121,15 +121,12 @@ class _ConvNd(nn.Module):
                 ParametricGaussian(out_channels, **factory_kwargs),
                 pi=prior_pi
             )
-            self.bias = self.bias_distribution.sample()
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter('bias_distribution', None)
+            self.register_parameter('bias_prior', None)
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        self.weight = self.weight_distribution.sample()
-        if self.bias is not None:
-            self.bias = self.bias_distribution.sample()
         self.log_prior = None
         self.log_posterior = None
 
@@ -144,7 +141,7 @@ class _ConvNd(nn.Module):
             s += ', output_padding={output_padding}'
         if self.groups != 1:
             s += ', groups={groups}'
-        if self.bias is None:
+        if self.bias_distribution is None:
             s += ', bias=False'
         if self.padding_mode != 'zeros':
             s += ', padding_mode={padding_mode}'
@@ -192,17 +189,17 @@ class Conv2d(_ConvNd):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.training:
-            self.weight = self.weight_distribution.sample()
-            self.log_prior = self.weight_prior.log_prob(self.weight)
-            self.log_posterior = self.weight_distribution.log_prob(self.weight)
-            if self.bias is not None:
-                self.bias = self.bias_distribution.sample()
-                self.log_prior += self.bias_prior.log_prob(self.bias)
-                self.log_posterior += self.bias_distribution.log_prob(self.bias)
+            w = self.weight_distribution.sample()
+            self.log_prior = self.weight_prior.log_prob(w)
+            self.log_posterior = self.weight_distribution.log_prob(w)
+            if self.bias_distribution is not None:
+                b = self.bias_distribution.sample()
+                self.log_prior += self.bias_prior.log_prob(b)
+                self.log_posterior += self.bias_distribution.log_prob(b)
         else:
-            self.weight = self.weight_distribution.mu
-            if self.bias is not None:
-                self.bias = self.bias_distribution.mu
+            w = self.weight_distribution.mu
+            if self.bias_distribution is not None:
+                w = self.bias_distribution.mu
             self.log_prior = None
             self.log_posterior = None
-        return self._conv_forward(x, self.weight, self.bias)
+        return self._conv_forward(x, w, w)
