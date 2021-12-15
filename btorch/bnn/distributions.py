@@ -10,14 +10,13 @@ class ParametricGaussian(nn.Module):
         factory_kwargs = {'device': device, 'dtype': dtype}
         self.mu = nn.Parameter(torch.randn(shape, **factory_kwargs))
         self.rho = nn.Parameter(torch.randn(shape, **factory_kwargs))
-        self.epsilon = torch.randn(shape, **factory_kwargs)
 
     @property
     def sigma(self):
         return self.rho.exp().log1p()
 
     def sample(self):
-        return self.mu + self.sigma * self.epsilon.normal_()
+        return self.mu + self.sigma * torch.randn_like(self.mu)
 
     def log_prob(self, w):
         return (
