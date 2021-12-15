@@ -14,7 +14,9 @@ You may install this repository like so:
 pip install git+https://github.com/peustr/bayesian-torch.git@main
 ```
 
-Then replace the layers you want with the Bayesian ones by using the `bnn` module instead of `nn` like so:
+## Usage
+
+Replace the layers you want with the Bayesian ones by using the `bnn` module instead of `nn` like so:
 ```python
 import torch.nn as nn
 import btorch.bnn as bnn
@@ -27,6 +29,16 @@ model = nn.Sequential(
     nn.Flatten(),
     bnn.Linear(num_inp_features, num_out_features),
 )
+```
+
+Add the KL divergence loss term in your loss function, e.g.:
+```python
+import torch.nn.functional as F
+from btorch.bnn.loss import KL_divergence
+
+# ...
+loss = F.cross_entropy(logits, target) + KL_divergence(model)
+loss.backward()
 ```
 
 Currently supported layers: `[bnn.Conv2d, bnn.Linear]`.
