@@ -199,7 +199,7 @@ class Conv2d(_ConvNd):
         else:
             w = self.weight_distribution.mu
             if self.bias_distribution is not None:
-                w = self.bias_distribution.mu
+                b = self.bias_distribution.mu
             self.log_prior = None
             self.log_posterior = None
         return self._conv_forward(x, w, b)
