@@ -1,44 +1,33 @@
-import math
-
 import torch
 import torch.nn as nn
+from torch.distributions.normal import Normal
 
 
 class ParametricGaussian(nn.Module):
-    def __init__(self, shape, device=None, dtype=None):
+    def __init__(self, shape, requires_grad=True):
         super().__init__()
-        factory_kwargs = {'device': device, 'dtype': dtype}
-        self.mu = nn.Parameter(torch.randn(shape, **factory_kwargs))
-        self.rho = nn.Parameter(torch.randn(shape, **factory_kwargs))
+        self.requires_grad = requires_grad
+        self.mu = nn.Parameter(torch.randn(shape), requires_grad=requires_grad)
+        self.rho = nn.Parameter(torch.randn(shape), requires_grad=requires_grad)
 
     @property
     def sigma(self):
         return self.rho.exp().log1p()
 
+    @property
+    def obj(self):
+        return Normal(self.mu, self.sigma)
+
     def sample(self):
-        return self.mu + self.sigma * torch.randn_like(self.mu)
+        return self.obj.sample()
 
-    def log_prob(self, w, reduction=True):
-        log_probs = (
-            - math.log(math.sqrt(2 * math.pi))
-            - self.sigma.log()
-            - ((w - self.mu).square()) / (2 * self.sigma.square())
-        )
-        if reduction:
-            return log_probs.sum()
-        return log_probs
+    def rsample(self):
+        return self.obj.rsample()
 
+    def log_prob(self, x):
+        return self.obj.log_prob(x)
 
-class ParametricGaussianMixture(nn.Module):
-    def __init__(self, gaussian_1, gaussian_2, pi=0.5):
-        super().__init__()
-        self.gaussian_1 = gaussian_1
-        self.gaussian_2 = gaussian_2
-        self.pi = pi
-
-    def log_prob(self, w):
-        return (
-            self.pi * self.gaussian_1.log_prob(w, False).exp()
-            + (1 - self.pi) * self.gaussian_2.log_prob(w, False).exp()
-            + 1e-6
-        ).log().sum()
+    def update(self, other):
+        self.load_state_dict(other.state_dict())
+        self.mu.requires_grad = self.requires_grad
+        self.rho.requires_grad = self.requires_grad
