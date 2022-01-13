@@ -23,12 +23,12 @@ class Conv2d(nn.Module):
 
     def forward(self, x):
         weight = self.weight_distribution.rsample()
-        self.log_prior = self.weight_prior.log_prob(weight)
-        self.log_posterior = self.weight_distribution.log_prob(weight)
+        self.log_prior = self.weight_prior.log_prob(weight).sum()
+        self.log_posterior = self.weight_distribution.log_prob(weight).sum()
         if self.bias:
             bias = self.bias_distribution.rsample()
-            self.log_prior += self.bias_prior.log_prob(bias)
-            self.log_posterior += self.bias_distribution.log_prob(bias)
+            self.log_prior += self.bias_prior.log_prob(bias).sum()
+            self.log_posterior += self.bias_distribution.log_prob(bias).sum()
         else:
             bias = None
         return F.conv2d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
