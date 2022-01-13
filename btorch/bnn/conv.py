@@ -23,14 +23,18 @@ class Conv2d(nn.Module):
             self.bias_distribution = ParametricGaussian((out_channels,))
             self.bias_prior = ParametricGaussian((out_channels,), requires_grad=False)
 
-    def forward(self, x):
-        weight = self.weight_distribution.rsample()
-        self.log_prior = self.weight_prior.log_prob(weight).sum()
-        self.log_posterior = self.weight_distribution.log_prob(weight).sum()
-        if self.bias:
-            bias = self.bias_distribution.rsample()
-            self.log_prior += self.bias_prior.log_prob(bias).sum()
-            self.log_posterior += self.bias_distribution.log_prob(bias).sum()
+    def forward(self, x, test=False):
+        bias = None
+        if test:
+            weight = self.weight_distribution.mu.data
+            if self.bias:
+                bias = self.bias_distribution.mu.data
         else:
-            bias = None
+            weight = self.weight_distribution.rsample()
+            self.log_prior = self.weight_prior.log_prob(weight).sum()
+            self.log_posterior = self.weight_distribution.log_prob(weight).sum()
+            if self.bias:
+                bias = self.bias_distribution.rsample()
+                self.log_prior += self.bias_prior.log_prob(bias).sum()
+                self.log_posterior += self.bias_distribution.log_prob(bias).sum()
         return F.conv2d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)

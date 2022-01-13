@@ -16,14 +16,18 @@ class Linear(nn.Module):
             self.bias_prior = ParametricGaussian((out_features,), requires_grad=False)
             self.bias_distribution = ParametricGaussian((out_features,))
 
-    def forward(self, x):
-        weight = self.weight_distribution.rsample()
-        self.log_prior = self.weight_prior.log_prob(weight).sum()
-        self.log_posterior = self.weight_distribution.log_prob(weight).sum()
-        if self.bias:
-            bias = self.bias_distribution.rsample()
-            self.log_prior += self.bias_prior.log_prob(bias).sum()
-            self.log_posterior += self.bias_distribution.log_prob(bias).sum()
+    def forward(self, x, test=False):
+        bias = None
+        if test:
+            weight = self.weight_distribution.mu.data
+            if self.bias:
+                bias = self.bias_distribution.mu.data
         else:
-            bias = None
+            weight = self.weight_distribution.rsample()
+            self.log_prior = self.weight_prior.log_prob(weight).sum()
+            self.log_posterior = self.weight_distribution.log_prob(weight).sum()
+            if self.bias:
+                bias = self.bias_distribution.rsample()
+                self.log_prior += self.bias_prior.log_prob(bias).sum()
+                self.log_posterior += self.bias_distribution.log_prob(bias).sum()
         return F.linear(x, weight, bias)
