@@ -15,8 +15,10 @@ class Conv2d(nn.Module):
         self.dilation = (dilation, dilation)
         self.groups = groups
         self.bias = bias
-        self.weight_distribution = ParametricGaussian((out_channels, in_channels // groups, kernel_size))
-        self.weight_prior = ParametricGaussian((out_channels, in_channels // groups, kernel_size), requires_grad=False)
+        self.weight_distribution = ParametricGaussian(
+            (out_channels, in_channels // groups, *self.kernel_size))
+        self.weight_prior = ParametricGaussian(
+            (out_channels, in_channels // groups, *self.kernel_size), requires_grad=False)
         if self.bias:
             self.bias_distribution = ParametricGaussian((out_channels,))
             self.bias_prior = ParametricGaussian((out_channels,), requires_grad=False)
