@@ -13,7 +13,7 @@ class Conv2d(nn.Module):
         self.stride = (stride, stride)
         self.padding = (padding, padding)
         self.dilation = (dilation, dilation)
-        self.groups = (groups, groups)
+        self.groups = groups
         self.bias = bias
         self.weight_distribution = ParametricGaussian((out_channels, in_channels // groups, kernel_size))
         self.weight_prior = ParametricGaussian((out_channels, in_channels // groups, kernel_size), requires_grad=False)
