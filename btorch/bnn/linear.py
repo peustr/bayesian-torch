@@ -11,23 +11,23 @@ class Linear(nn.Module):
         self.out_features = out_features
         self.bias = bias
         self.weight_prior = ParametricGaussian((out_features, in_features), requires_grad=False)
-        self.weight_distribution = ParametricGaussian((out_features, in_features))
+        self.weight_posterior = ParametricGaussian((out_features, in_features))
         if self.bias:
             self.bias_prior = ParametricGaussian((out_features,), requires_grad=False)
-            self.bias_distribution = ParametricGaussian((out_features,))
+            self.bias_posterior = ParametricGaussian((out_features,))
 
     def forward(self, x):
         bias = None
         if self.training:
-            weight = self.weight_distribution.rsample()
+            weight = self.weight_posterior.rsample()
             self.log_prior = self.weight_prior.log_prob(weight).sum()
-            self.log_posterior = self.weight_distribution.log_prob(weight).sum()
+            self.log_posterior = self.weight_posterior.log_prob(weight).sum()
             if self.bias:
-                bias = self.bias_distribution.rsample()
+                bias = self.bias_posterior.rsample()
                 self.log_prior += self.bias_prior.log_prob(bias).sum()
-                self.log_posterior += self.bias_distribution.log_prob(bias).sum()
+                self.log_posterior += self.bias_posterior.log_prob(bias).sum()
         else:
-            weight = self.weight_distribution.mu.data
+            weight = self.weight_posterior.mu.data
             if self.bias:
-                bias = self.bias_distribution.mu.data
+                bias = self.bias_posterior.mu.data
         return F.linear(x, weight, bias)
