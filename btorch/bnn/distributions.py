@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-from torch.distributions.normal import Normal
 
 
 class ParametricGaussian(nn.Module):
@@ -17,15 +16,9 @@ class ParametricGaussian(nn.Module):
     def sigma(self):
         return self.rho.exp().log1p()
 
-    @property
-    def obj(self):
-        return Normal(self.mu, self.sigma)
-
-    def sample(self, sample_shape=torch.Size([])):
-        return self.obj.sample(sample_shape=sample_shape)
-
-    def rsample(self, sample_shape=torch.Size([])):
-        return self.obj.rsample(sample_shape=sample_shape)
-
-    def log_prob(self, x):
-        return self.obj.log_prob(x)
+    def sample(self, batch_size=None):
+        if batch_size is None:
+            eps = torch.randn(self.mu.shape, dtype=self.mu.dtype, device=self.mu.device)
+        else:
+            eps = torch.randn(batch_size, *self.mu.shape, dtype=self.mu.dtype, device=self.mu.device)
+        return self.mu + eps * self.sigma

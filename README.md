@@ -34,10 +34,10 @@ model = nn.Sequential(
 Add the KL divergence loss term in your loss function, e.g.:
 ```python
 import torch.nn.functional as F
-from btorch.bnn.loss import KL_divergence
+from btorch.bnn.loss import kl_divergence
 
 # ...
-loss = F.cross_entropy(logits, target) + KL_divergence(model)
+loss = F.cross_entropy(logits, target) + kl_divergence(model)
 loss.backward()
 ```
 

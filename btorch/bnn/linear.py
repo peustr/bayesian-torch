@@ -18,16 +18,16 @@ class Linear(nn.Module):
 
     def forward(self, x):
         bias = None
+        batch_size, f_in = x.shape
         if self.training:
-            weight = self.weight_posterior.rsample()
-            self.log_prior = self.weight_prior.log_prob(weight).sum()
-            self.log_posterior = self.weight_posterior.log_prob(weight).sum()
+            weight = self.weight_posterior.sample(batch_size=batch_size)
+            x = x[:, None, :] @ weight.transpose(1, 2)
+            x = x.view(batch_size, self.out_features)
             if self.bias:
-                bias = self.bias_posterior.rsample()
-                self.log_prior += self.bias_prior.log_prob(bias).sum()
-                self.log_posterior += self.bias_posterior.log_prob(bias).sum()
-        else:
-            weight = self.weight_posterior.mu.data
-            if self.bias:
-                bias = self.bias_posterior.mu.data
+                bias = self.bias_posterior.sample(batch_size=batch_size)
+                x += bias
+            return x
+        weight = self.weight_posterior.mu.data
+        if self.bias:
+            bias = self.bias_posterior.mu.data
         return F.linear(x, weight, bias)

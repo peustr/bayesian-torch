@@ -1,9 +1,20 @@
-def KL_divergence(bnn, reduction='mean'):
+def kl_divergence(bnn, reduction='mean'):
     assert reduction in ('sum', 'mean')
-    bnn_modules = [m for m in bnn.modules() if(hasattr(m, 'log_prior') and hasattr(m, 'log_posterior'))]
-    kl_divergence = bnn_modules[0].log_posterior - bnn_modules[0].log_prior
-    for module in bnn_modules[1:]:
-        kl_divergence += module.log_posterior - module.log_prior
+    n, loss = 0., 0.
+    for m in bnn.modules():
+        if hasattr(m, 'weight_posterior') and hasattr(m, 'weight_prior'):
+            n += 1.
+            loss += _kl(m.weight_posterior, m.weight_prior)
+            if m.bias:
+                loss += _kl(m.bias_posterior, m.bias_prior)
     if reduction == 'mean':
-        kl_divergence /= len(bnn_modules)
-    return kl_divergence
+        loss /= n
+    return loss
+
+
+def _kl(p, q):
+    return (
+        0.5 * (
+            (q.sigma / p.sigma) ** 2 + (p.mu - q.mu) ** 2 / (p.sigma ** 2) - 1. + 2. * (p.sigma / q.sigma).log()
+        )
+    ).sum()
