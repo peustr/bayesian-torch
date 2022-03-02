@@ -15,6 +15,6 @@ def kl_divergence(bnn, reduction='mean'):
 def _kl(p, q):
     return (
         0.5 * (
-            (q.sigma / p.sigma) ** 2 + (p.mu - q.mu) ** 2 / (p.sigma ** 2) - 1. + 2. * (p.sigma / q.sigma).log()
+            (p.sigma / q.sigma) ** 2 + (q.mu - p.mu) ** 2 / (q.sigma ** 2) - 1. + 2. * (q.sigma / p.sigma).log()
         )
-    ).sum()
+    ).mean()

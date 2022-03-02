@@ -41,4 +41,6 @@ loss = F.cross_entropy(logits, target) + kl_divergence(model)
 loss.backward()
 ```
 
+A clear example is included in the `examples` folder.
+
 Currently supported layers: `[bnn.Conv2d, bnn.Linear]`.

@@ -1,11 +1,48 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from btorch.bnn.distributions import ParametricGaussian
+from btorch.bnn.distributions import ParametricGaussianPrior, ParametricGaussianPosterior
 
 
 class Conv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True):
+    """ Bayesian implementation of torch.nn.Conv2d.
+
+    Arguments:
+        `in_channels`, `out_channels`, `kernel_size`, `stride`, `padding`, `dilation`, `groups`, `bias`:
+            Same as https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html#conv2d.
+        `shared_prior` (bool, optional): The same prior is shared for all weights and biases to
+            optimize memory usage. If true, it will force the weight prior to be of shape (1,)
+            instead of (out_channels, in_channels // groups, *kernel_size), and the bias prior to
+            be of shape (1,) instead of (out_channels,). Default: `True`.
+        `prior_mu`, `prior_rho`, `posterior_mu`, `posterior_rho` (2-tuple, optional): Tuples of the
+            form (low, high) for weight and bias initialization. If specified, the parametric
+            Gaussian prior and posterior distributions will be initialized uniformly from the
+            range (low, high). Default: `None`.
+
+    Note:
+        For arguments `kernel_size`, `stride`, `padding` and `dilation` only integer values are
+            currently supported.
+    Note:
+        Check the `ParametricGaussianPrior` and `ParametricGaussianPosterior` classes in the
+            `btorch.bnn.distributions` module for the default initialization values of the
+            distributions when the `*_mu` and `*_rho` arguments are `None`.
+    """
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        bias=True,
+        shared_prior=True,
+        prior_mu=None,
+        prior_rho=None,
+        posterior_mu=None,
+        posterior_rho=None,
+    ):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -15,13 +52,29 @@ class Conv2d(nn.Module):
         self.dilation = (dilation, dilation)
         self.groups = groups
         self.bias = bias
-        self.weight_posterior = ParametricGaussian(
-            (out_channels, in_channels // groups, *self.kernel_size))
-        self.weight_prior = ParametricGaussian(
-            (out_channels, in_channels // groups, *self.kernel_size), requires_grad=False)
+        weight_prior_shape = (1,) if shared_prior else (out_channels, in_channels // groups, *self.kernel_size)
+        self.weight_prior = ParametricGaussianPrior(
+            weight_prior_shape,
+            mu=prior_mu,
+            rho=prior_rho,
+        )
+        self.weight_posterior = ParametricGaussianPosterior(
+            (out_channels, in_channels // groups, *self.kernel_size),
+            mu=posterior_mu,
+            rho=posterior_rho,
+        )
         if self.bias:
-            self.bias_posterior = ParametricGaussian((out_channels,))
-            self.bias_prior = ParametricGaussian((out_channels,), requires_grad=False)
+            bias_prior_shape = (1,) if shared_prior else (out_channels,)
+            self.bias_prior = ParametricGaussianPrior(
+                bias_prior_shape,
+                mu=prior_mu,
+                rho=prior_rho,
+            )
+            self.bias_posterior = ParametricGaussianPosterior(
+                (out_channels,),
+                mu=posterior_mu,
+                rho=posterior_rho,
+            )
 
     def forward(self, x):
         bias = None

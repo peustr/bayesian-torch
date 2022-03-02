@@ -9,8 +9,6 @@ class ParametricGaussian(nn.Module):
         self.requires_grad = requires_grad
         self.mu = nn.Parameter(torch.empty(shape), requires_grad=requires_grad)
         self.rho = nn.Parameter(torch.empty(shape), requires_grad=requires_grad)
-        init.uniform_(self.mu, -0.1, 0.1)
-        init.uniform_(self.rho, -5., -4.)
 
     @property
     def sigma(self):
@@ -22,3 +20,29 @@ class ParametricGaussian(nn.Module):
         else:
             eps = torch.randn(batch_size, *self.mu.shape, dtype=self.mu.dtype, device=self.mu.device)
         return self.mu + eps * self.sigma
+
+
+class ParametricGaussianPrior(ParametricGaussian):
+    def __init__(self, shape, mu=None, rho=None):
+        super().__init__(shape, requires_grad=False)
+        if mu is None:
+            init.uniform_(self.mu, -0.1, 0.1)
+        else:
+            init.uniform_(self.mu, mu[0], mu[1])
+        if rho is None:
+            init.uniform_(self.rho, -2., -1.)
+        else:
+            init.uniform_(self.rho, rho[0], rho[1])
+
+
+class ParametricGaussianPosterior(ParametricGaussian):
+    def __init__(self, shape, mu=None, rho=None):
+        super().__init__(shape, requires_grad=True)
+        if mu is None:
+            init.uniform_(self.mu, -0.1, 0.1)
+        else:
+            init.uniform_(self.mu, mu[0], mu[1])
+        if rho is None:
+            init.uniform_(self.rho, -5., -4.)
+        else:
+            init.uniform_(self.rho, rho[0], rho[1])
