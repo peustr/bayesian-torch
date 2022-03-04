@@ -14,6 +14,8 @@ class Linear(nn.Module):
             optimize memory usage. If true, it will force the weight prior to be of shape (1,)
             instead of (out_features, in_features), and the bias prior to
             be of shape (1,) instead of (out_features,). Default: `True`.
+        `force_sampling` (bool, optional): If true, samples from the parameter distribution
+            during testing, otherwise uses the mean. Default: `False`.
         `prior_mu`, `prior_rho`, `posterior_mu`, `posterior_rho` (2-tuple, optional): Tuples of the
             form (low, high) for weight and bias initialization. If specified, the parametric
             Gaussian prior and posterior distributions will be initialized uniformly from the
@@ -30,6 +32,7 @@ class Linear(nn.Module):
         out_features,
         bias=True,
         shared_prior=True,
+        force_sampling=False,
         prior_mu=None,
         prior_rho=None,
         posterior_mu=None,
@@ -39,6 +42,8 @@ class Linear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.bias = bias
+        self.shared_prior = shared_prior
+        self.force_sampling = force_sampling
         weight_prior_shape = (1,) if shared_prior else (out_features, in_features)
         self.weight_prior = ParametricGaussianPrior(
             weight_prior_shape,
@@ -66,7 +71,7 @@ class Linear(nn.Module):
     def forward(self, x):
         bias = None
         batch_size, f_in = x.shape
-        if self.training:
+        if self.training or self.force_sampling:
             weight = self.weight_posterior.sample(batch_size=batch_size)
             x = x[:, None, :] @ weight.transpose(1, 2)
             x = x.view(batch_size, self.out_features)

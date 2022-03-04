@@ -14,6 +14,8 @@ class Conv2d(nn.Module):
             optimize memory usage. If true, it will force the weight prior to be of shape (1,)
             instead of (out_channels, in_channels // groups, *kernel_size), and the bias prior to
             be of shape (1,) instead of (out_channels,). Default: `True`.
+        `force_sampling` (bool, optional): If true, samples from the parameter distribution
+            during testing, otherwise uses the mean. Default: `False`.
         `prior_mu`, `prior_rho`, `posterior_mu`, `posterior_rho` (2-tuple, optional): Tuples of the
             form (low, high) for weight and bias initialization. If specified, the parametric
             Gaussian prior and posterior distributions will be initialized uniformly from the
@@ -38,6 +40,7 @@ class Conv2d(nn.Module):
         groups=1,
         bias=True,
         shared_prior=True,
+        force_sampling=False,
         prior_mu=None,
         prior_rho=None,
         posterior_mu=None,
@@ -52,6 +55,8 @@ class Conv2d(nn.Module):
         self.dilation = (dilation, dilation)
         self.groups = groups
         self.bias = bias
+        self.shared_prior = shared_prior
+        self.force_sampling = force_sampling
         weight_prior_shape = (1,) if shared_prior else (out_channels, in_channels // groups, *self.kernel_size)
         self.weight_prior = ParametricGaussianPrior(
             weight_prior_shape,
@@ -79,7 +84,7 @@ class Conv2d(nn.Module):
     def forward(self, x):
         bias = None
         batch_size, c_in, xH, xW = x.shape
-        if self.training:
+        if self.training or self.force_sampling:
             weight = self.weight_posterior.sample(batch_size=batch_size)
             x = x.view(1, batch_size * c_in, xH, xW)
             weight = weight.view(batch_size * self.out_channels, c_in, *self.kernel_size)
