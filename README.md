@@ -43,4 +43,10 @@ loss.backward()
 
 A clear example is included in the `examples` folder.
 
-Currently supported layers: `[bnn.Conv2d, bnn.Linear]`.
+## Supported layers
+
+The following BNN layers are currently supported (since version 0.8.0):
+
+- Linear: `Linear`.
+- Convolutional: `Conv1d, Conv2d, ConvTranspose1d, ConvTranspose2d`.
+- Batch normalization: `BatchNorm1d, BatchNorm2d`
