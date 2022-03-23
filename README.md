@@ -47,6 +47,6 @@ A clear example is included in the `examples` folder.
 
 The following BNN layers are currently supported (since version 0.8.0):
 
-- Linear: `Linear`.
-- Convolutional: `Conv1d, Conv2d, ConvTranspose1d, ConvTranspose2d`.
+- Linear: `Linear`
+- Convolutional: `Conv1d, Conv2d, ConvTranspose1d, ConvTranspose2d`
 - Batch normalization: `BatchNorm1d, BatchNorm2d`
