@@ -9,8 +9,7 @@ class Linear(nn.Module):
     """ Bayesian implementation of torch.nn.Linear.
 
     Args:
-        `in_features`, `out_features`, `bias`: Same as
-            https://pytorch.org/docs/stable/generated/torch.nn.Linear.html#linear.
+        `in_features`, `out_features`, `bias`: Same as https://pytorch.org/docs/stable/generated/torch.nn.Linear.html.
         `shared_prior` (bool, optional): The same prior is shared for all weights and biases to
             optimize memory usage. If true, it will force the weight prior to be of shape (1,)
             instead of (out_features, in_features), and the bias prior to
@@ -27,7 +26,6 @@ class Linear(nn.Module):
             `btorch.bnn.distributions` module for the default initialization values of the
             distributions when the `*_mu` and `*_rho` arguments are `None`.
     """
-
     def __init__(
         self,
         in_features: int,
