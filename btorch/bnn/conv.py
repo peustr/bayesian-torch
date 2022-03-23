@@ -399,8 +399,8 @@ class ConvTranspose1d(_ConvTransposeNd):
             `dilation`, `padding_mode`: Same as https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose1d.html.
         `shared_prior` (bool, optional): The same prior is shared for all weights and biases to
             optimize memory usage. If true, it will force the weight prior to be of shape (1,)
-            instead of (out_channels, in_channels // groups, *kernel_size), and the bias prior to
-            be of shape (1,) instead of (out_channels,). Default: `True`.
+            instead of (in_channels, out_channels // groups, *kernel_size), and the bias prior to
+            be of shape (1,) instead of (in_channels,). Default: `True`.
         `force_sampling` (bool, optional): If true, samples from the parameter distribution
             during testing, otherwise uses the mean. Default: `False`.
         `prior_mu`, `prior_rho`, `posterior_mu`, `posterior_rho` (2-tuple, optional): Tuples of the
@@ -485,8 +485,8 @@ class ConvTranspose2d(_ConvTransposeNd):
             `dilation`, `padding_mode`: Same as https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose2d.html.
         `shared_prior` (bool, optional): The same prior is shared for all weights and biases to
             optimize memory usage. If true, it will force the weight prior to be of shape (1,)
-            instead of (out_channels, in_channels // groups, *kernel_size), and the bias prior to
-            be of shape (1,) instead of (out_channels,). Default: `True`.
+            instead of (in_channels, out_channels // groups, *kernel_size), and the bias prior to
+            be of shape (1,) instead of (in_channels,). Default: `True`.
         `force_sampling` (bool, optional): If true, samples from the parameter distribution
             during testing, otherwise uses the mean. Default: `False`.
         `prior_mu`, `prior_rho`, `posterior_mu`, `posterior_rho` (2-tuple, optional): Tuples of the
