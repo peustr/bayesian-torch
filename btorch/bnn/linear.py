@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -7,7 +8,7 @@ from btorch.bnn.distributions import ParametricGaussianPrior, ParametricGaussian
 class Linear(nn.Module):
     """ Bayesian implementation of torch.nn.Linear.
 
-    Arguments:
+    Args:
         `in_features`, `out_features`, `bias`: Same as
             https://pytorch.org/docs/stable/generated/torch.nn.Linear.html#linear.
         `shared_prior` (bool, optional): The same prior is shared for all weights and biases to
@@ -26,18 +27,22 @@ class Linear(nn.Module):
             `btorch.bnn.distributions` module for the default initialization values of the
             distributions when the `*_mu` and `*_rho` arguments are `None`.
     """
+
     def __init__(
         self,
-        in_features,
-        out_features,
-        bias=True,
-        shared_prior=True,
-        force_sampling=False,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        shared_prior: bool = True,
+        force_sampling: bool = False,
         prior_mu=None,
         prior_rho=None,
         posterior_mu=None,
         posterior_rho=None,
-    ):
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -47,31 +52,45 @@ class Linear(nn.Module):
         weight_prior_shape = (1,) if shared_prior else (out_features, in_features)
         self.weight_prior = ParametricGaussianPrior(
             weight_prior_shape,
-            mu=prior_mu,
-            rho=prior_rho,
+            mu_range=prior_mu,
+            rho_range=prior_rho,
+            **factory_kwargs,
         )
         self.weight_posterior = ParametricGaussianPosterior(
             (out_features, in_features),
-            mu=posterior_mu,
-            rho=posterior_rho,
+            mu_range=posterior_mu,
+            rho_range=posterior_rho,
+            **factory_kwargs,
         )
-        if self.bias:
+        if bias:
             bias_prior_shape = (1,) if shared_prior else (out_features,)
             self.bias_prior = ParametricGaussianPrior(
                 bias_prior_shape,
-                mu=prior_mu,
-                rho=prior_rho,
+                mu_range=prior_mu,
+                rho_range=prior_rho,
+                **factory_kwargs,
             )
             self.bias_posterior = ParametricGaussianPosterior(
                 (out_features,),
-                mu=posterior_mu,
-                rho=posterior_rho,
+                mu_range=posterior_mu,
+                rho_range=posterior_rho,
+                **factory_kwargs,
             )
+        else:
+            self.register_parameter('bias_prior', None)
+            self.register_parameter('bias_posterior', None)
 
-    def forward(self, x):
+    def reset_parameters(self) -> None:
+        self.weight_prior.reset_parameters()
+        self.weight_posterior.reset_parameters()
+        if self.bias:
+            self.bias_prior.reset_parameters()
+            self.bias_posterior.reset_parameters()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         bias = None
-        batch_size, f_in = x.shape
         if self.training or self.force_sampling:
+            batch_size, f_in = x.shape
             weight = self.weight_posterior.sample(batch_size=batch_size)
             x = x[:, None, :] @ weight.transpose(1, 2)
             x = x.view(batch_size, self.out_features)
@@ -83,3 +102,8 @@ class Linear(nn.Module):
         if self.bias:
             bias = self.bias_posterior.mu.data
         return F.linear(x, weight, bias)
+
+    def extra_repr(self) -> str:
+        return 'in_features={}, out_features={}, bias={}'.format(
+            self.in_features, self.out_features, self.bias
+        )

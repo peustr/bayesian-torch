@@ -11,7 +11,7 @@ The `CUBLAS_WORKSPACE_CONFIG=:4096:8` flag is added purely for reproducibility, 
 
 These two experiments should give the following accuracy scores on MNIST.
 ```
-CNN:  Test set: Average loss: 0.0282, Accuracy: 9915/10000 (99%)
-BCNN: Test set: Average loss: 0.0266, Accuracy: 9920/10000 (99%)
+CNN : Test set: Average loss: 0.0272, Accuracy: 9917/10000 (99%)
+BCNN: Test set: Average loss: 0.0294, Accuracy: 9931/10000 (99%)
 ```
 Evidently, the Bayesian neural network enjoys a tiny performance boost.
