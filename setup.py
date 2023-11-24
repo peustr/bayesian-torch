@@ -1,7 +1,7 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
-    name='btorch',
-    version='0.8.0',
+    name="btorch",
+    version="0.0.1",
     packages=find_packages(),
 )

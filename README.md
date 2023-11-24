@@ -4,8 +4,8 @@
 
 If you have a pytorch environment, for example:
 ```bash
-conda create -n myenv python=3.8
-conda activate myenv
+conda create -n btorch python=3.8
+conda activate btorch
 conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
 ```
 
@@ -19,6 +19,7 @@ pip install git+https://github.com/peustr/bayesian-torch.git@main
 Replace the layers you want with the Bayesian ones by using the `bnn` module instead of `nn` like so:
 ```python
 import torch.nn as nn
+
 import btorch.bnn as bnn
 
 model = nn.Sequential(
@@ -34,10 +35,11 @@ model = nn.Sequential(
 Add the KL divergence loss term in your loss function, e.g.:
 ```python
 import torch.nn.functional as F
+
 from btorch.bnn.loss import kl_divergence
 
 # ...
-loss = F.cross_entropy(logits, target) + kl_divergence(model)
+loss = F.cross_entropy(logits, target) + kl_divergence(model, prior_model)
 loss.backward()
 ```
 
@@ -45,8 +47,7 @@ A clear example is included in the `examples` folder.
 
 ## Supported layers
 
-The following BNN layers are currently supported (since version 0.8.0):
+The following BNN layers are currently supported:
 
-- Linear: `Linear`
-- Convolutional: `Conv1d, Conv2d, ConvTranspose1d, ConvTranspose2d`
-- Batch normalization: `BatchNorm1d, BatchNorm2d`
+- Linear: `bnn.Linear`
+- 2D Convolutional: `bnn.Conv2d`

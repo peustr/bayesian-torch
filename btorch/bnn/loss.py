@@ -1,30 +1,20 @@
-def kl_divergence(bnn, reduction='mean'):
-    assert reduction in ('sum', 'mean')
-    n, loss = 0., 0.
-    for m in bnn.modules():
-        if (
-            hasattr(m, 'weight_posterior') and
-            hasattr(m, 'weight_prior') and
-            m.weight_posterior is not None and
-            m.weight_prior is not None
-        ):
-            n += 1.
-            loss += _kl(m.weight_posterior, m.weight_prior)
-            if (
-                hasattr(m, 'bias_posterior') and
-                hasattr(m, 'bias_prior') and
-                m.bias_posterior is not None and
-                m.bias_prior is not None
-            ):
-                loss += _kl(m.bias_posterior, m.bias_prior)
-    if reduction == 'mean':
-        loss /= n
-    return loss
+import btorch.bnn as bnn
+
+_SUPPORTED_LAYERS = [bnn.Conv2d, bnn.Linear]
 
 
-def _kl(p, q):
-    return (
-        0.5 * (
-            (p.sigma / q.sigma) ** 2 + (q.mu - p.mu) ** 2 / (q.sigma ** 2) - 1. + 2. * (q.sigma / p.sigma).log()
-        )
-    ).mean()
+def kl_divergence(model, prior_model):
+    kl_loss = 0.0
+    nl = 0.0
+    for lp, lp0 in zip(model.modules(), prior_model.modules()):
+        if type(lp) in _SUPPORTED_LAYERS and type(lp0) in _SUPPORTED_LAYERS:
+            kl_loss += _kl_div(lp.weight, lp.weight_var, lp0.weight, lp0.weight_var)
+            if lp.bias is not None and lp0.bias is not None:
+                kl_loss += _kl_div(lp.bias, lp.bias_var, lp0.bias, lp0.bias_var)
+            nl += 1.0
+    return kl_loss / nl
+
+
+def _kl_div(m, s, m0, s0):
+    var_ratio = (s / s0).pow(2)
+    return 0.5 * (var_ratio + ((m - m0) / s0).pow(2) - 1.0 - var_ratio.log()).mean()
